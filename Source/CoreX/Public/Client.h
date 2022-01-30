@@ -35,6 +35,13 @@ public:
 		void GetAllFriends();
 		void OnGetAllFriendsComplete(int32 LocalUserNumber, bool bWasSuccessful, const FString& ListName, const FString& ErrorStr);
 
+	UFUNCTION(Exec, BlueprintCallable, Category="Client")
+		void ShowInviteUI();
+	UFUNCTION(Exec, BlueprintCallable, Category="Client")
+		void ShowFriendsUI();
+	UFUNCTION(Exec, BlueprintCallable, Category="Client")
+		void ShowAchievementsUI();
+
 protected:
 	class IOnlineSubsystem* OnlineSubsystem;
 	

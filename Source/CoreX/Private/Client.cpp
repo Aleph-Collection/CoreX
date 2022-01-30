@@ -6,6 +6,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "Interfaces/OnlineIdentityInterface.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 #include "Interfaces/OnlineFriendsInterface.h"
 #include "Interfaces/OnlineSessionInterface.h"
 
@@ -61,27 +62,24 @@ void UClient::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUn
 
 void UClient::CreateSession()
 {
-	if(bLoginStatus)
+	if(bLoginStatus && OnlineSubsystem)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 		{
-			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
-			{
-				FOnlineSessionSettings SessionSettings;
-				SessionSettings.bIsDedicated = false;
-				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bIsLANMatch = false;
-				SessionSettings.NumPublicConnections = 2;
-				SessionSettings.bAllowJoinInProgress = true;
-				SessionSettings.bAllowJoinViaPresence = true;
-				SessionSettings.bUsesPresence = true;
-				SessionSettings.bUseLobbiesIfAvailable = true;
-				SessionSettings.bUseLobbiesVoiceChatIfAvailable = true;
-				SessionSettings.Set(SEARCH_KEYWORDS, FString("AlephOfficialServer"), EOnlineDataAdvertisementType::ViaOnlineService);
+			FOnlineSessionSettings SessionSettings;
+			SessionSettings.bIsDedicated = false;
+			SessionSettings.bShouldAdvertise = true;
+			SessionSettings.bIsLANMatch = false;
+			SessionSettings.NumPublicConnections = 2;
+			SessionSettings.bAllowJoinInProgress = true;
+			SessionSettings.bAllowJoinViaPresence = true;
+			SessionSettings.bUsesPresence = true;
+			SessionSettings.bUseLobbiesIfAvailable = true;
+			SessionSettings.bUseLobbiesVoiceChatIfAvailable = true;
+			SessionSettings.Set(SEARCH_KEYWORDS, FString("AlephOfficialServer"), EOnlineDataAdvertisementType::ViaOnlineService);
 
-				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UClient::OnCreateSessionComplete);
-				SessionPtr->CreateSession(0, OnlineSessionName, SessionSettings);
-			}
+			SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UClient::OnCreateSessionComplete);
+			SessionPtr->CreateSession(0, OnlineSessionName, SessionSettings);
 		}
 	}
 }
@@ -101,15 +99,12 @@ void UClient::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 
 void UClient::DestroySession()
 {
-	if(bLoginStatus)
+	if(bLoginStatus && OnlineSubsystem)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 		{
-			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
-			{
-				SessionPtr->OnDestroySessionCompleteDelegates.AddUObject(this, &UClient::OnDestroySessionComplete);
-				SessionPtr->DestroySession(OnlineSessionName);
-			}
+			SessionPtr->OnDestroySessionCompleteDelegates.AddUObject(this, &UClient::OnDestroySessionComplete);
+			SessionPtr->DestroySession(OnlineSessionName);
 		}
 	}
 }
@@ -129,14 +124,11 @@ void UClient::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 
 void UClient::GetAllFriends()
 {
-	if(bLoginStatus)
+	if(bLoginStatus && OnlineSubsystem)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineFriendsPtr FriendsPtr = OnlineSubsystem->GetFriendsInterface())
 		{
-			if(IOnlineFriendsPtr FriendsPtr = OnlineSubsystem->GetFriendsInterface())
-			{
-				FriendsPtr->ReadFriendsList(0, FString(""), FOnReadFriendsListComplete::CreateUObject(this, &UClient::OnGetAllFriendsComplete));
-			}
+			FriendsPtr->ReadFriendsList(0, FString(""), FOnReadFriendsListComplete::CreateUObject(this, &UClient::OnGetAllFriendsComplete));
 		}
 	}
 }
@@ -144,24 +136,54 @@ void UClient::GetAllFriends()
 void UClient::OnGetAllFriendsComplete(int32 LocalUserNumber, bool bWasSuccessful, const FString& ListName, const FString& ErrorStr)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Friends retrieved with success. Code: %d"), bWasSuccessful);
-	if(bWasSuccessful)
+	if(bWasSuccessful && OnlineSubsystem)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineFriendsPtr FriendsPtr = OnlineSubsystem->GetFriendsInterface())
 		{
-			if(IOnlineFriendsPtr FriendsPtr = OnlineSubsystem->GetFriendsInterface())
+			TArray<TSharedRef<FOnlineFriend>> FriendsList;
+			if(FriendsPtr->GetFriendsList(0, ListName, FriendsList))
 			{
-				TArray<TSharedRef<FOnlineFriend>> FriendsList;
-				if(FriendsPtr->GetFriendsList(0, ListName, FriendsList))
+				for(TSharedRef<FOnlineFriend> Friend : FriendsList)
 				{
-					for(TSharedRef<FOnlineFriend> Friend : FriendsList)
-					{
-						FriendDisplayName = Friend.Get().GetRealName();
-						UE_LOG(LogTemp, Warning, TEXT("%s"), *FriendDisplayName);
-					}
-				} else {
-					UE_LOG(LogTemp, Warning, TEXT("Failed to retrieve friends."));
+					FriendDisplayName = Friend.Get().GetRealName();
+					UE_LOG(LogTemp, Warning, TEXT("%s"), *FriendDisplayName);
 				}
+			} else {
+				UE_LOG(LogTemp, Warning, TEXT("Failed to retrieve friends."));
 			}
+		}
+	}
+}
+
+void UClient::ShowInviteUI()
+{
+	if(bLoginStatus && OnlineSubsystem)
+	{
+		if(IOnlineExternalUIPtr UIPtr = OnlineSubsystem->GetExternalUIInterface())
+		{
+			UIPtr->ShowInviteUI(0);
+		}
+	}
+}
+
+void UClient::ShowFriendsUI()
+{
+	if(bLoginStatus && OnlineSubsystem)
+	{
+		if(IOnlineExternalUIPtr UIPtr = OnlineSubsystem->GetExternalUIInterface())
+		{
+			UIPtr->ShowFriendsUI(0);
+		}
+	}
+}
+
+void UClient::ShowAchievementsUI()
+{
+	if(bLoginStatus && OnlineSubsystem)
+	{
+		if(IOnlineExternalUIPtr UIPtr = OnlineSubsystem->GetExternalUIInterface())
+		{
+			UIPtr->ShowAchievementsUI(0);
 		}
 	}
 }

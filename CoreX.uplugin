@@ -1,9 +1,9 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.1",
+	"VersionName": "1.3",
 	"FriendlyName": "CoreX",
-	"Description": "It contains a game instance with code that makes connecting to the EOS easier.",
+	"Description": "",
 	"Category": "Miscellaneous",
 	"CreatedBy": "whiteex",
 	"CreatedByURL": "",
@@ -11,7 +11,7 @@
 	"MarketplaceURL": "",
 	"SupportURL": "",
 	"CanContainContent": true,
-	"IsBetaVersion": true,
+	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
