@@ -9,8 +9,12 @@
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "Interfaces/OnlineFriendsInterface.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 
-const FName OnlineSessionName = FName("Lobby");
+const FName Session_N = FName("CoreXSession");
+const FString LobbyName = FString("CoreXLobby");
+const FString LobbyMap = FString("sp_testing_01?listen");
 
 UClient::UClient()
 {
@@ -70,16 +74,16 @@ void UClient::CreateSession()
 			SessionSettings.bIsDedicated = false;
 			SessionSettings.bShouldAdvertise = true;
 			SessionSettings.bIsLANMatch = false;
-			SessionSettings.NumPublicConnections = 2;
+			SessionSettings.NumPublicConnections = 5;
 			SessionSettings.bAllowJoinInProgress = true;
 			SessionSettings.bAllowJoinViaPresence = true;
 			SessionSettings.bUsesPresence = true;
 			SessionSettings.bUseLobbiesIfAvailable = true;
 			SessionSettings.bUseLobbiesVoiceChatIfAvailable = true;
-			SessionSettings.Set(SEARCH_KEYWORDS, FString("AlephOfficialServer"), EOnlineDataAdvertisementType::ViaOnlineService);
+			SessionSettings.Set(SEARCH_KEYWORDS, LobbyName, EOnlineDataAdvertisementType::ViaOnlineService);
 
 			SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UClient::OnCreateSessionComplete);
-			SessionPtr->CreateSession(0, OnlineSessionName, SessionSettings);
+			SessionPtr->CreateSession(0, Session_N, SessionSettings);
 		}
 	}
 }
@@ -93,6 +97,7 @@ void UClient::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 		{
 			SessionPtr->ClearOnCreateSessionCompleteDelegates(this);
+			GetWorld()->ServerTravel(LobbyMap, false);
 		}
 	}
 }
@@ -104,7 +109,7 @@ void UClient::DestroySession()
 		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 		{
 			SessionPtr->OnDestroySessionCompleteDelegates.AddUObject(this, &UClient::OnDestroySessionComplete);
-			SessionPtr->DestroySession(OnlineSessionName);
+			SessionPtr->DestroySession(Session_N);
 		}
 	}
 }
@@ -118,6 +123,74 @@ void UClient::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 		{
 			SessionPtr->ClearOnDestroySessionCompleteDelegates(this);
+		}
+	}
+}
+
+void UClient::FindSession()
+{
+	if(bLoginStatus && OnlineSubsystem)
+	{
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+		{
+			SearchSettings = MakeShareable(new FOnlineSessionSearch());
+			SearchSettings->MaxSearchResults = 5000;
+			SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, LobbyName, EOnlineComparisonOp::Equals);
+			SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+
+			SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UClient::OnFindSessionComplete);
+			SessionPtr->FindSessions(0, SearchSettings.ToSharedRef());
+		}
+	}
+}
+
+void UClient::OnFindSessionComplete(bool bWasSuccessful)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Session(s) found with success. Code: %d"), bWasSuccessful);
+	if(bWasSuccessful)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Lobbie(s) found: %d"), SearchSettings->SearchResults.Num());
+
+		if(OnlineSubsystem)
+		{
+			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			{
+
+				if(SearchSettings->SearchResults.Num())
+				{
+					SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UClient::OnJoinSessionComplete);
+					SessionPtr->JoinSession(0, Session_N, SearchSettings->SearchResults[0]);
+				}
+			}
+		}
+	} else {
+			UE_LOG(LogTemp, Warning, TEXT("Session failed to be found. Code: %d"), bWasSuccessful);
+	}
+
+	if(OnlineSubsystem)
+	{
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+		{
+			SessionPtr->ClearOnFindSessionsCompleteDelegates(this);
+		}
+	}
+}
+
+void UClient::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	if(OnlineSubsystem)
+	{
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+		{
+			FString ConInfo = FString();
+			SessionPtr->GetResolvedConnectString(Session_N, ConInfo);
+			if(!ConInfo.IsEmpty())
+			{
+				if(APlayerController* PController = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+				{
+					PController->ClientTravel(ConInfo, ETravelType::TRAVEL_Absolute);
+				}
+			}
 		}
 	}
 }

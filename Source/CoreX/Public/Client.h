@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "OnlineSessionSettings.h"
 #include "Engine/GameInstance.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "Client.generated.h"
 
 /**
@@ -30,6 +32,12 @@ public:
 	UFUNCTION(Exec, BlueprintCallable, Category="Client")
 		void DestroySession();
 		void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
+
+	UFUNCTION(Exec, BlueprintCallable, Category="Client")
+		void FindSession();
+		void OnFindSessionComplete(bool bWasSuccessful);
+		TSharedPtr<FOnlineSessionSearch> SearchSettings;
+		void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
 	UFUNCTION(Exec, BlueprintCallable, Category="Client")
 		void GetAllFriends();
@@ -67,4 +75,13 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Input")
 		bool bToggleInteract = false;
+
+public:
+	// Those values are dedicated to the Aleph project
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Debug")
+	bool bAllowDebug; //Allows debugging
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Debug")
+	bool bAllowExtraMov = true; //Allows advanced movement
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Debug")
+	bool bAllowExchange = true; //Allows the use of the Heal ability
 };

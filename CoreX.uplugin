@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.3",
+	"VersionName": "1.5",
 	"FriendlyName": "CoreX",
 	"Description": "",
 	"Category": "Miscellaneous",
@@ -10,10 +10,9 @@
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"SupportURL": "",
+	"EngineVersion": "4.27.0",
 	"CanContainContent": true,
-	"IsBetaVersion": false,
-	"IsExperimentalVersion": false,
-	"Installed": false,
+	"Installed": true,
 	"Modules": [
 		{
 			"Name": "CoreX",
@@ -36,6 +35,11 @@
 		{
 			"Name": "OnlineSubsystemSteam",
 			"Enabled": true
+		},
+		{
+			"Name": "FSR 1.0",
+			"Enabled": true,
+			"Optional": true
 		}
 	]
 }
